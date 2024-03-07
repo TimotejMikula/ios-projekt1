@@ -1,1 +1,2 @@
 #!/bin/bash
+POSIXLY_CORRECT=yes

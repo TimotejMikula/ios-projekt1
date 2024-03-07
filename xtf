@@ -4,14 +4,16 @@
 export POSIXLY_CORRECT=yes
 export LC_ALL=C
 
-while getopts 'h' opt; do
+# Check for --help before getopts
+if [[ $1 == "--help" || $1 == "-h" ]]; then
+    echo "Hint - Help." >&2
+    exit 0
+fi
+
+while getopts '' opt; do
   case $opt in
-    'h')
-        echo "Pouzitie: xtf [-h] [subor] [subor] ..." >&2
-        echo "Program xtf vypise obsah suborov v poradi, v ktorom boli zadane" >&2
-        exit 0 ;;
     *)  
-        echo "Chyba: Neznamy prepinac" >&2
+        echo "errror invalid flag" >&2
         exit 1 ;;
   esac
 done

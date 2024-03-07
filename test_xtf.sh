@@ -4,13 +4,39 @@
 # author: dzives
 # heavily inspired by: pseja
 # Usage:
-#     (1) Download the gist to your "xtf" directory: wget https://gist.githubusercontent.com/dzives/bcb93e43e6643f86e8225d35f6817391/raw/3eb0c21b373528b7752a39c8356982a4c1a7dc4e/test_xtf.sh
-#     (2) Then (for adding permission):                 chmod u+x test_xtf.sh
+#     (1) Download the gist to your "xtf" directory: click raw ⬆️, copy url, wget url
+#     (2) Then (for adding permission):              chmod u+x test_xtf.sh
 #     (3) Execute this command in "xtf" directory:   ./test_xtf.sh
 #     (4) If any test fails, it will output the difference between the expected result and your output with diff command into the diff folder
 #     (4) Debug :D
+#     (5) You can check for updates using --update, if a newer verison exists, it will be downloaded and it will replace the test_xtf.sh file
 
 
+update(){
+    local url=${1}
+    username=$(echo "$url" | sed -n 's/https:\/\/gist\.github\.com\/\([^\/]*\)\/.*/\1/p')
+    content=$(wget -q -O - "$url")
+    extracted_link="https://gist.githubusercontent.com"$(echo "$content" | grep "<a[^>]*href=\"/$username.*.sh\"" | sed 's/.*href="//;s/".*//')
+    script=$(wget -q -O - "$extracted_link")
+    is_update=$(diff "$0" <(echo "$script") > /dev/null; echo $?)
+    if [ "$is_update" = "0" ]; then
+        echo "You are on the newest version"
+        exit 1
+    fi
+    if [ -w "$0" ];then
+        echo "$script" > "$0"
+        echo "Updated sucessfully."
+    else
+        echo "Couldn't write to file"
+        exit 1
+    fi
+    
+    exit 0
+}
+
+if [ "$1" = "--update" ]; then
+    update "https://gist.github.com/dzives/bcb93e43e6643f86e8225d35f6817391" # just enter the url of the gist
+fi
 
 # color codes
 GREEN='\033[0;32m'
@@ -24,6 +50,8 @@ correct=0
 # compile maze.c just in case
 
 rm -rf diff
+
+
 
 run_test() {
     local expected_output=${1}   
@@ -243,6 +271,11 @@ run_test "" "${args[@]}"
 # 23
 args=("-c" "ETH" "profit" "Trader1" "cryptoexchange.log" "cryptoexchange-2.log.gz")
 run_test "ETH : 30.9490" "${args[@]}"
+if  [ "$?" = "1" ] ; then
+    test_count=$((test_count - 1))
+    echo Rerunning test "$test_count"
+    run_test "ETH : 30.9489" "${args[@]}"
+fi
 
 # 24
 args=("-a" "2024-01-21 15:29:29" "status" "Trader1" "cryptoexchange.log")
@@ -266,7 +299,7 @@ run_test "" "${args[@]}"
 args=("-a" "2024-01-21 15:300:29" "-b" "2024-01-21 15:29:29" "status" "Trader1" "cryptoexchange.log")
 run_test "" "${args[@]}"
 
-# 29
+# 29 no trimming/rounding re-check needed
 export XTF_PROFIT=0
 args=("-a" "2024-01-21 15:29:29" "profit" "Trader1" "cryptoexchange.log")
 run_test "ETH : 10.9537" "${args[@]}"
@@ -293,7 +326,6 @@ args=("profit" "Trader1" "cryptoexchange.log")
 run_test "ETH : 28.3699
 EUR : -2000.0000
 USD : -3000.0000" "${args[@]}"
-unset XTF_PROFIT
 if  [ "$?" = "1" ] ; then
     test_count=$((test_count - 1))
     echo Rerunning test "$test_count"
@@ -301,6 +333,7 @@ if  [ "$?" = "1" ] ; then
 EUR : -2000.0000
 USD : -3000.0000" "${args[@]}"
 fi
+unset XTF_PROFIT
 
 # 32 space in name
 cp cryptoexchange.log "crypto exchange.log"
@@ -317,11 +350,19 @@ EUR
 USD" "${args[@]}"
 
 # 34 long currency (4 chars)
-args=("list" "-c" "ABCD" "Trader1" "cryptoexchange.log")
+args=( "-c" "ABCD" "list" "Trader1" "cryptoexchange.log")
 run_test "" "${args[@]}"
 
 # 35 short currency (2 chars)
-args=("list" "-c" "AB" "Trader1" "cryptoexchange.log")
+args=( "-c" "AB" "list" "Trader1" "cryptoexchange.log")
+run_test "" "${args[@]}"
+
+# 36 2 times -a
+args=("-a" "2024-01-25 15:29:29" "-a" "2024-01-25 16:29:29" "Trader1" "cryptoexchange.log")
+run_test "" "${args[@]}"
+
+# 37 2 times -b
+args=("-b" "2024-01-25 15:29:29" "-b" "2024-01-25 16:29:29" "Trader1" "cryptoexchange.log")
 run_test "" "${args[@]}"
 
 
@@ -330,7 +371,7 @@ run_test "" "${args[@]}"
 
 # print test results
 if [[ "$correct" == "$test_count" ]]; then
-    echo -e "\nPassed $correct / $test_count 🎉"
+    echo -e "\nPassed $correct / $test_count 🤓"
 else
     echo -e "\nPassed $correct / $test_count"
 fi
@@ -343,3 +384,4 @@ rm cryptoexchange.log
 rm cryptoexchange-2.log.gz
 rm cryptoexchange-1.log
 rm "crypto exchange.log"
+rm "crypto exchange.log.gz"

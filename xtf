@@ -1,2 +1,17 @@
 #!/bin/bash
-POSIXLY_CORRECT=yes
+# xmikult00 Timotej Mikula
+# 7.3.2024
+export POSIXLY_CORRECT=yes
+export LC_ALL=C
+
+while getopts 'h' opt; do
+  case $opt in
+    'h')
+        echo "Pouzitie: xtf [-h] [subor] [subor] ..." >&2
+        echo "Program xtf vypise obsah suborov v poradi, v ktorom boli zadane" >&2
+        exit 0 ;;
+    *)  
+        echo "Chyba: Neznamy prepinac" >&2
+        exit 1 ;;
+  esac
+done

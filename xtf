@@ -6,24 +6,22 @@
 export POSIXLY_CORRECT=yes
 export LC_ALL=C
 
-# Get the count of command-line arguments
-count_of_args=$#
-counter_of_args=0
-IFS=$'\n'
-
 # Check for --help before getopts
-if [[ $1 == "--help" || $1 == "-h" ]]; then
+if [[ ($1 == "--help") || ($1 == "-h") ]]; then
     echo "Hint - Help."
-    counter_of_args=$((counter_of_args + 1))
     exit 0
 fi
 
 args=("$@")
+count_of_args=$#
+counter_of_args=0
+IFS=$'\n'
 
 counter_for_getopts=1
 a_counter=0
 b_counter=0
 c_counter=0
+declare -a allcurrency
 declare -a currency
 
 # Parse command-line options using getopts
@@ -35,16 +33,19 @@ while getopts ':a:b:c' opt; do
         b)  date_after=${args[counter_for_getopts]}
             b_counter=$((b_counter + 1)) ;;
 
-        c)  val=0
+        c)  
+            echo "${arg[counter_of_args + 1]}"
+            val=0
             for curr in "${currency[@]}"; do
-                if [[ "${arg[$counter_of_args+1]}" == *"$curr"* ]]; then
-                    val
+                if [[ "${arg[counter_of_args + 1]}" == *"$curr"* ]]; then
+                    val=1
                 fi
             done
-            if [[ $val -eq 1 ]]; then
-                currency[c_counter]=("${arg[counter_for_getopts+1]}")
+            if [[ $val -eq 0 ]]; then
+                currency[c_counter]="${arg[counter_for_getopts+1]}"
+                c_counter=$((c_counter + 1))
             fi
-            c_counter=$((c_counter + 1)) ;;
+            ;;
 
         *)  echo "errror invalid flag" >&2 #echo
             exit 1 ;;
@@ -52,6 +53,10 @@ while getopts ':a:b:c' opt; do
     counter_of_args=$((counter_of_args + 2))
     counter_for_getopts=$((counter_for_getopts + 2))
 done
+
+# for (( i = 0; i <= c_counter; i++ )); do
+#     echo "$i = ${currency[i]}"
+# done
 
 # Check if multiple -a or -b options are provided
 if [[ ($a_counter -gt 1) || ($b_counter -gt 1) ]]; then
@@ -95,12 +100,16 @@ if [[ ($name == "") || ($name == *.log) ]]; then
     echo "errror no name provided" >&2
     exit 1
 fi
-counter_of_args=$((counter_of_args + 1))
+# counter_of_args=$((counter_of_args + 1))
 
 # Store remaining arguments in the "log" array
 for (( i = counter_of_args; i < count_of_args; i++ )); do
     lognum=$((i - counter_of_args + 1))
     log[lognum]=${args[$i]}
+    if [[ (${log[lognum]} != *.log) && (${log[lognum]} != *.gz) ]]; then
+        echo "errror invalid log file" >&2
+        exit 1
+    fi
 done
 
 # Process each log file
@@ -134,7 +143,6 @@ done
 if [[ ((($listcurrencyvalue -eq 0) && ($listvalue -eq 0) && ($statusvalue -eq 0) && ($profitvalue -eq 0)) || ($listvalue -eq 1)) ]]; then
 #     # Print lines containing the specified name
 
-    
 
 #     # for logs in "${content[@]}"; do
 #     #     for line in $logs; do
@@ -163,7 +171,7 @@ else
     if [[ $listcurrencyvalue -eq 1 ]]; then
 #         # Print the third column of lines containing the specified name
         for logs in "${log[@]}"; do
-            awk -v name="$name" '{ if($1 == name) print $3;}' "$logs"
+            awk -v name="$name" '{ if($1 == name) { print $3; } }' "$logs"
 #             # awk '{ if($1 == $name) print $3;}' $logs
 #             # awk -v '{ if($1 == "$name") print $3;}' "$logs"
 #             # awk '{print $3}' "$logs" | grep "$name"

@@ -85,7 +85,7 @@ run_test() {
 
 
 # tests
-echo -e "Trader1;2024-01-15 15:30:42;EUR;-2000.0000\nTrader2;2024-01-15 15:31:12;BTC;-9.8734\nTrader1;2024-01-16 18:06:32;USD;-3000.0000\nCryptoWiz;2024-01-17 08:58:09;CZK;10000.0000\nTrader1;2024-01-20 11:43:02;ETH;1.9417\nTrader1;2024-01-22 09:17:40;ETH;10.9537\n" > cryptoexchange.log
+echo -e "Trader1;2024-01-15 15:30:42;EUR;-2000.0000\nTrader2;2024-01-15 15:31:12;BTC;-9.8734\nTrader1;2024-01-16 18:06:32;USD;-3000.0000\nCryptoWiz;2024-01-17 08:58:09;CZK;10000.0000\nTrader1;2024-01-20 11:43:02;ETH;1.9417\nTrader1;2024-01-22 09:17:40;ETH;10.9537" > cryptoexchange.log
 
 # 0
 args=("Trader1" "cryptoexchange.log")
@@ -164,10 +164,8 @@ unset XTF_PROFIT
 
 # 10
 echo Příklad s více logy
-echo -e "Trader1;2024-01-15 15:30:42;EUR;-2000.0000\nTrader2;2024-01-15 15:31:12;BTC;-9.8734\nTrader1;2024-01-16 18:06:32;USD;-3000.0000\n" > cryptoexchange-1.log
-echo -e "CryptoWiz;2024-01-17 08:58:09;CZK;10000.0000\n
-Trader1;2024-01-20 11:43:02;ETH;1.9417\n
-Trader1;2024-01-22 09:17:40;ETH;10.9537\n" > cryptoexchange-2.log
+echo -e "Trader1;2024-01-15 15:30:42;EUR;-2000.0000\nTrader2;2024-01-15 15:31:12;BTC;-9.8734\nTrader1;2024-01-16 18:06:32;USD;-3000.0000" > cryptoexchange-1.log
+echo -e "CryptoWiz;2024-01-17 08:58:09;CZK;10000.0000\nTrader1;2024-01-20 11:43:02;ETH;1.9417\nTrader1;2024-01-22 09:17:40;ETH;10.9537" > cryptoexchange-2.log
 gzip -c cryptoexchange-2.log > cryptoexchange-2.log.gz
 rm cryptoexchange-2.log
 

@@ -18,26 +18,15 @@ args=("$@")
 counter_for_getopts=1
 while getopts ':a:b:c' opt; do
   case $opt in
-    a)  
-        date_before=${args[counter_for_getopts]}
-         ;;
-    b)  
-        date_after=${args[counter_for_getopts]}
-         ;;
-    c) 
-        currency=${args[counter_for_getopts]}
-         ;;
-    *)  
-        echo "errror invalid flag" >&2 #echo
+    a)  date_before=${args[counter_for_getopts]} ;;
+    b)  date_after=${args[counter_for_getopts]} ;;
+    c)  currency=${args[counter_for_getopts]} ;;
+    *)  echo "errror invalid flag" >&2 #echo
         exit 1 ;;
   esac
   counter_of_args=$((counter_of_args + 2))
   counter_for_getopts=$((counter_for_getopts + 2))
 done
-
-echo "date_before = $date_before" >&2 #echo
-echo "date_after = $date_after" >&2 #echo
-echo "currency = $currency" >&2 #echo
 
 listcurrencyvalue=0
 listvalue=0
@@ -48,45 +37,58 @@ for arg in "${args[@]}"; do
     if [[ $arg == "list-currency" ]]; then
         listcurrencyvalue=1
         counter_of_args=$((counter_of_args + 1))
-        echo "command = list-currency" >&2 #echo
         break
     fi
     
     if [[ $arg == "list" ]]; then
         listvalue=1
         counter_of_args=$((counter_of_args + 1))
-        echo "command = list" >&2 #echo
         break
     fi
 
     if [[ $arg == "status" ]]; then
         statusvalue=1
         counter_of_args=$((counter_of_args + 1))
-        echo "command = status" >&2 #echo
         break
     fi
 
     if [[ $arg == "profit" ]]; then
         profitvalue=1
         counter_of_args=$((counter_of_args + 1))
-        echo "command = profit" >&2 #echo
         break
     fi    
 done
 
-if [[ ($listcurrencyvalue -eq 0) && ($listvalue -eq 0) && ($statusvalue -eq 0) && ($profitvalue -eq 0) ]]; then
-    echo "no command = list" >&2 #echo
-fi
-
 name=${args[$counter_of_args]}
 counter_of_args=$((counter_of_args + 1))
-
-echo "name = $name" >&2 #echo
 
 for (( i = counter_of_args; i < count_of_args; i++ )); do
     lognum=$((i - counter_of_args + 1))
     log[lognum]=${args[$i]}
-    echo "log$lognum = ${log[lognum]}" >&2 #echo
 done
+
+for ((i = 1; i <= ${#log[@]}; i++)); do
+
+    if [[ "${log[i]}" == *.gz ]]; then
+        log[i]="$(gzip -dc "${log[i]}")"
+    fi
+
+    if [ -e "${log[i]}" ]; then 
+    content[i]=$(cat "${log[i]}") 
+    else
+        exit 1
+    fi
+
+done
+
+if [[ ($listcurrencyvalue -eq 0) && ($listvalue -eq 0) && ($statusvalue -eq 0) && ($profitvalue -eq 0) ]]; then
+    for logs in "${content[@]}"; do
+        for line in $logs; do
+            if [[ $line == *$name* ]]; then
+                echo "$line"
+            fi
+        done
+    done
+fi
 
 exit 0

@@ -5,6 +5,7 @@
 # Set POSIXLY_CORRECT and LC_ALL environment variables
 export POSIXLY_CORRECT=yes
 export LC_ALL=C
+set -e #exit immidiately if a command exits with a non-zero status
 
 # Check for --help before getopts
 if [[ ($1 == "--help") || ($1 == "-h") ]]; then
@@ -35,7 +36,7 @@ while getopts ':a:b:c:' opt; do
             date_before=${args[counter_for_getopts]}
             # Validate datetime format
             if [[ -n "$date_before" ]]; then
-                if ! date -d "$date_before" >/dev/null 2>&1; then
+                if ! date -d "$date_before" +"%Y-%m-%d %H:%M:%S" >/dev/null 2>&1; then
                     echo "error invalid datetime format for date_before" >&2
                     exit 1
                 fi
@@ -49,20 +50,24 @@ while getopts ':a:b:c:' opt; do
             fi
             date_after=${args[counter_for_getopts]}
             if [[ -n "$date_after" ]]; then
-                if ! date -d "$date_after" >/dev/null 2>&1; then
-                    echo "error invalid datetime format for date_after" >&2
-                    exit 1
+                if [[ -n "$date_after" ]]; then
+                    if ! date -d "$date_after" +"%Y-%m-%d %H:%M:%S" >/dev/null 2>&1; then
+                        echo "error invalid datetime format for date_after" >&2
+                        exit 1
+                    fi
                 fi
             fi
             b_counter=$((b_counter + 1)) ;;
 
         c)  
             val=0
-            for curr in "${currency[@]}"; do
-                if [[ "${args[counter_of_args + 1]}" == *"$curr"* ]]; then
-                    val=1
-                fi
-            done
+            if (( ${#currency[@]} > 0 )); then
+                for curr in "${currency[@]}"; do
+                    if [[ "${args[counter_of_args + 1]}" == *"$curr"* ]]; then
+                        val=1
+                    fi
+                done
+            fi
             if (( val == 0 )); then
                 currency[c_counter]="${args[counter_of_args + 1]}"
                 c_counter=$((c_counter + 1))
@@ -80,6 +85,8 @@ while getopts ':a:b:c:' opt; do
     counter_of_args=$((counter_of_args + 2))
     counter_for_getopts=$((counter_for_getopts + 2))
 done
+
+
 
 listcurrencyvalue=0
 listvalue=0
@@ -117,10 +124,6 @@ if [[ ($name == "") || ($name == *.log) || ($name == *" "*)]]; then
     echo "errror no name provided" >&2
     exit 1
 fi
-
-# for curr in "${currency[@]}"; do
-#     echo "$curr"
-# done
 
 # for curr in "${currency[@]}"; do
 #     echo "$curr"
@@ -166,6 +169,13 @@ for logs in "${log[@]}"; do
         exit 1
     fi
     # Validate datetime format
+    awk -F";" ' { if ( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ); else { exit 1; } }' "$logs"
+    awk -F";" '{ if ($1 ~ /^[^;]+$/); else { exit 1; } }' "$logs"
+    awk -F";" '{ if (date -d $2 +"%YYYY-%mm-%dd %HH:%MM:%SS"); else { exit 1; } }' "$logs"
+    awk -F";" '{ if ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/); else { exit 1; } }' "$logs"
+    awk -F";" '{ if (length($3) == 3); else { exit 1; } }' "$logs"
+    awk -F";" '{ if ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/); else { exit 1; } }' "$logs"
+    
     
 done
 
@@ -182,17 +192,15 @@ if (( ( listcurrencyvalue == 0 && listvalue == 0 && statusvalue == 0 && profitva
     
     if (( ${#currency[@]} > 0 )); then
         for logs in "${log[@]}"; do
-            for curr in "${currency[@]}"; do
-                if [[ (-n "$date_before") && (-n "$date_after") ]]; then
-                    awk -F";" -v name="$name" -v currency="$curr" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 == currency) && ($2 >= date_before) && ($2 <= date_after)) print $0; }' "$logs"
-                elif [[ -n "$date_before" ]]; then
-                    awk -F";" -v name="$name" -v currency="$curr" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 == currency) && ($2 >= date_before)) print $0; }' "$logs"
-                elif [[ -n "$date_after" ]]; then
-                    awk -F";" -v name="$name" -v currency="$curr" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 == currency) && ($2 <= date_after)) print $0; }' "$logs"
-                else
-                    awk -F";" -v name="$name" -v currency="$curr" '{ if (($1 == name) && ($3 == currency)) print $0; }' "$logs"
-                fi
-            done
+            if [[ (-n "$date_before") && (-n "$date_after") ]]; then
+                awk -F";" -v name="$name" -v currency="${currency[*]}" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 =~ currency) && ($2 >= date_before) && ($2 <= date_after)) print $0; }' "$logs"
+            elif [[ -n "$date_before" ]]; then
+                awk -F";" -v name="$name" -v currency="${currency[*]}" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 =~ currency) && ($2 >= date_before)) print $0; }' "$logs"
+            elif [[ -n "$date_after" ]]; then
+                awk -F";" -v name="$name" -v currency="${currency[*]}" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 =~ currency) && ($2 <= date_after)) print $0; }' "$logs"
+            else
+                awk -F";" -v name="$name" -v currency="${currency[*]}" '{ if (($1 == name) && ($3 ~ currency)) print $0; }' "$logs"
+            fi
         done
     else
         for logs in "${log[@]}"; do
@@ -207,20 +215,6 @@ if (( ( listcurrencyvalue == 0 && listvalue == 0 && statusvalue == 0 && profitva
             fi
         done
     fi
-
-    # if (( ${#currency[@]} > 0 )); then
-    #     for logs in "${log[@]}"; do
-    #         for curr in "${currency[@]}"; do
-    #             awk -F";" -v name="$name" -v currency="$curr" '{ if (($1 == name) && ($3 == currency)) print $0; }' "$logs"
-    #         done
-    #     done
-    # else
-    #     for logs in "${log[@]}"; do
-    #         awk -F";" -v name="$name" '{ if ($1 == name) print $0; }' "$logs"
-    #     done
-    # fi
-
-
 else
     if (( listcurrencyvalue == 1 )); then
         # Print the third column of lines containing the specified name

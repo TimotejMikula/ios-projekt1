@@ -73,7 +73,6 @@ while getopts ':a:b:c:' opt; do
                 exit 1
             fi
             ;;
-
         *)  
             echo "errror invalid flag" >&2
             exit 1 ;;
@@ -148,14 +147,16 @@ for ((i = 1; i <= ${#log[@]}; i++)); do
     
     if [[ "${log[i]}" == *".gz" ]]; then
         # echo "${log[i]}"
-        log[i]="$(gzip -dc "${log[i]}")"
+        gz="$(gzip -dc "${log[i]}")"
+        log[i]="${log[i]%.gz}"
+        
         # echo "${log[i]}"
     fi
 
-    if [[ "${log[i]}" == *" "* ]]; then
-        echo "errror space in log file" >&2
-        exit 1
-    fi
+    # if [[ "${log[i]}" == *" "* ]]; then
+    #     echo "errror space in log file" >&2
+    #     exit 1
+    # fi
 
 done
 
@@ -215,30 +216,19 @@ if (( ( listcurrencyvalue == 0 && listvalue == 0 && statusvalue == 0 && profitva
 
 elif (( listcurrencyvalue == 1 )); then
 
-        # declare -a allcurrency
-        # Print the third column of lines containing the specified name
-        # count_of_currency=0
-        allcurrency=()
-        curr=""
-
-        for logs in "${log[@]}"; do
-            curr=$(awk -F";" -v name="$name" '{ if ($1 == name) print $3; }' "$logs")
-            # echo "curr = $curr"
-            allcurrency+=("$curr")
-            for curre in "${allcurrency[@]}"; do
-                echo "$curre"
-            done
-        done
+    # declare -a allcurrency
+    # Print the third column of lines containing the specified name
+    for logs in "${log[@]}"; do
+        # echo "logs: $logs"
+        awk -F";" -v name="$name" '{ if ($1 == name) print $3; }' "$logs" | sort -u
+    done
         
-        sort -u "${allcurrency[@]}"
-        uniq "${allcurrency[@]}" 
-        
-        # echo "${allcurrency[@]}"
-        # echo "curr = $curr"
 
-        for curr in "${allcurrency[@]}"; do
-            echo "allcurrency = $curr"
-        done
+        
+        
+        
+        
+        
  
 elif (( statusvalue == 1 )); then
 

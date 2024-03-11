@@ -1,1 +1,4 @@
-
+EUR
+USD
+ETH
+ETH

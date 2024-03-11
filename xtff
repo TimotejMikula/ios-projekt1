@@ -1,0 +1,247 @@
+#!/bin/bash
+# xmikult00 Timotej Mikula
+# 7.3.2024
+
+# Set POSIXLY_CORRECT and LC_ALL environment variables
+export POSIXLY_CORRECT=yes
+export LC_ALL=C
+set -e #exit immidiately if a command exits with a non-zero status
+
+# Check for --help before getopts
+if [[ ($1 == "--help") || ($1 == "-h") ]]; then
+    echo "Hint - Help."
+    exit 0
+fi
+
+args=("$@")
+count_of_args=$#
+counter_of_args=0
+IFS=$'\n'
+
+counter_for_getopts=1
+a_counter=0
+b_counter=0
+c_counter=0
+
+# declare -a currency
+
+# Parse command-line options using getopts
+while getopts ':a:b:c:' opt; do
+    case $opt in
+        a)  
+            if [[ $date_before != "" ]]; then
+                echo "errror multiple -a options" >&2
+                exit 1
+            fi
+            date_before=${args[counter_for_getopts]}
+            # Validate datetime format
+            if [[ -n "$date_before" ]]; then
+                if ! date -d "$date_before" +"%Y-%m-%d %H:%M:%S" >/dev/null 2>&1; then
+                    echo "error invalid datetime format for date_before" >&2
+                    exit 1
+                fi
+            fi
+            a_counter=$((a_counter + 1)) ;;
+
+        b)  
+            if [[ $date_after != "" ]]; then
+                echo "errror multiple -b options" >&2
+                exit 1
+            fi
+            date_after=${args[counter_for_getopts]}
+            if [[ -n "$date_after" ]]; then
+                if [[ -n "$date_after" ]]; then
+                    if ! date -d "$date_after" +"%Y-%m-%d %H:%M:%S" >/dev/null 2>&1; then
+                        echo "error invalid datetime format for date_after" >&2
+                        exit 1
+                    fi
+                fi
+            fi
+            b_counter=$((b_counter + 1)) ;;
+
+        c)  
+            if [[ $currency != "" ]]; then
+                echo "errror multiple -c options" >&2
+                exit 1
+            fi
+            
+            currency="${args[counter_of_args + 1]}"
+            c_counter=$((c_counter + 1))
+                
+            if [[ ${#currency} -ne 3 ]]; then
+                echo "error invalid currency length" >&2
+                exit 1
+            fi
+            ;;
+        *)  
+            echo "errror invalid flag" >&2
+            exit 1 ;;
+    esac
+    counter_of_args=$((counter_of_args + 2))
+    counter_for_getopts=$((counter_for_getopts + 2))
+done
+
+
+
+listcurrencyvalue=0
+listvalue=0
+statusvalue=0
+profitvalue=0
+
+# Check for specific arguments in the command-line arguments
+for arg in "${args[@]}"; do
+    case $arg in
+        "list")
+            listvalue=1
+            counter_of_args=$((counter_of_args + 1))
+            break
+            ;;
+        "list-currency")
+            listcurrencyvalue=1
+            counter_of_args=$((counter_of_args + 1))
+            break
+            ;;
+        "status")
+            statusvalue=1
+            counter_of_args=$((counter_of_args + 1))
+            break
+            ;;
+        "profit")
+            profitvalue=1
+            counter_of_args=$((counter_of_args + 1))
+            break
+            ;;
+    esac
+done
+
+name=${args[counter_of_args]}
+if [[ ($name == "") || ($name == *.log) || ($name == *" "*) || ($name == "status") || ($name == "list-currency") || ($name == "status") || ($name == "profit")]]; then
+    echo "errror no name provided" >&2
+    exit 1
+fi
+
+# for curr in "${currency[@]}"; do
+#     echo "$curr"
+# done
+
+# Store remaining arguments in the "log" array
+for (( i = counter_of_args + 1; i < count_of_args; i++ )); do
+    lognum=$((i))
+    # val=0
+    # for log_item in "${log[@]}"; do
+    #     if [[ ("${args[lognum]}" == *"$log_item"*) ]]; then
+    #         val=1
+    #         break
+    #     fi
+    # done
+    # if (( val == 1 )); then
+    #     break   
+    # fi    
+    log[lognum]=${args[i]}
+done
+
+# Process each log file
+for ((i = 1; i <= ${#log[@]}; i++)); do
+
+    # Decompress .gz files if necessary
+    
+    if [[ "${log[i]}" == *".gz" ]]; then
+        # echo "${log[i]}"
+        gz="$(gzip -d "${log[i]}")"
+        log[i]="${log[i]%.gz}"
+        
+        # echo "${log[i]}"
+    fi
+
+    # if [[ "${log[i]}" == *" "* ]]; then
+    #     echo "errror space in log file" >&2
+    #     exit 1
+    # fi
+
+done
+
+for logs in "${log[@]}"; do
+    if [[ ! -f "$logs" ]]; then
+        echo "errror log file not found" >&2
+        exit 1
+    fi
+    # Validate datetime format
+    # awk -F";" ' { if ( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ); else { exit 1; } }' "$logs"
+    # awk -F";" '{ if ($1 ~ /^[^;]+$/); else { exit 1; } }' "$logs"
+    # awk -F";" '{ if (date -d $2 +"%YYYY-%mm-%dd %HH:%MM:%SS"); else { exit 1; } }' "$logs"
+    # awk -F";" '{ if ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/); else { exit 1; } }' "$logs"
+    # awk -F";" '{ if (length($3) == 3); else { exit 1; } }' "$logs"
+    # awk -F";" '{ if ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/); else { exit 1; } }' "$logs"
+
+    awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ($1 ~ /^[^;]+$/) && (date -d $2 +"%YYYY-%mm-%dd %HH:%MM:%SS") && ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/) && (length($3) == 3) && ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/)); else {exit 1;} }' "$logs"
+    
+    
+done
+
+# echo "name: $name"
+# echo "currency: ${currency[*]}"
+# echo "log: ${log[*]}"
+# echo "date_before: $date_before"
+# echo "date_after: $date_after"
+# echo "command:\nlistcurrency: $listcurrencyvalue\nlist: $listvalue\nstatus: $statusvalue\nprofit: $profitvalue"
+
+# Perform different actions based on the provided arguments
+if (( ( listcurrencyvalue == 0 && listvalue == 0 && statusvalue == 0 && profitvalue == 0 ) || (listvalue == 1) )); then
+    # Print lines containing the specified name
+    
+    
+    for logs in "${log[@]}"; do
+        if [[ -n "$currency" ]]; then
+            if [[ (-n "$date_before") && (-n "$date_after") ]]; then
+                awk -F";" -v name="$name" -v currency="$currency" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 == currency) && ($2 >= date_before) && ($2 <= date_after)) print $0;  >/dev/null 2>&1; }' "$logs"
+            elif [[ -n "$date_before" ]]; then
+                awk -F";" -v name="$name" -v currency="$currency" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 == currency) && ($2 >= date_before)) print $0;  >/dev/null 2>&1; }' "$logs"
+            elif [[ -n "$date_after" ]]; then
+                awk -F";" -v name="$name" -v currency="$currency" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($3 == currency) && ($2 <= date_after)) print $0;  >/dev/null 2>&1; }' "$logs"
+            else
+                awk -F";" -v name="$name" -v currency="$currency" '{ if (($1 == name) && ($3 ~ currency)) print $0; }' "$logs"
+            fi
+        else
+            if [[ (-n "$date_before") && (-n "$date_after") ]]; then
+                awk -F";" -v name="$name" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($2 >= date_before) && ($2 <= date_after)) print $0;  >/dev/null 2>&1; }' "$logs"
+            elif [[ -n "$date_before" ]]; then
+                awk -F";" -v name="$name" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($2 >= date_before)) print $0;  >/dev/null 2>&1; }' "$logs"
+            elif [[ -n "$date_after" ]]; then
+                awk -F";" -v name="$name" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if (($1 == name) && ($2 <= date_after)) print $0;  >/dev/null 2>&1; }' "$logs"
+            else
+                awk -F";" -v name="$name" '{ if ($1 == name) print $0; }' "$logs"
+            fi
+        fi
+    done
+
+elif (( listcurrencyvalue == 1 )); then
+
+    # declare -a allcurrency
+    # Print the third column of lines containing the specified name
+    for logs in "${log[@]}"; do
+        # echo "logs: $logs"
+        awk -F";" -v name="$name" '{ if ($1 == name) print $3; }' "$logs" | sort -u
+    done
+        
+
+        
+        
+        
+        
+        
+ 
+elif (( statusvalue == 1 )); then
+
+    echo "status"
+
+elif (( profitvalue == 1 )); then
+
+    echo "profit"
+
+else
+    echo "error invalid arguments" >&2
+    exit 1
+
+fi
+
+exit 0

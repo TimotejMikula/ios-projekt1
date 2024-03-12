@@ -5,19 +5,11 @@ export LC_ALL=C
 
 set -e
 
-# args=("$@")
-count_of_args=$#
-# awk '{print $1}' sort | uniq |
-{
-if ((4<5)); then
-    awk '{ if ($1 == "ArmstrongCoin") print $0;}' cryptoexchange-5.log
-fi 
-} | sort -u |
+declare -A test
 
-{
-if (( count_of_args < 5 )); then
-    awk '{print $1}' | sort -u 
-else 
-    awk '{print $2}' sort | sort -u 
-fi
-} | awk '{print $0}'
+test["a"]=1
+test["b"]=2
+test["c"]=3
+((test["a"] += 3))
+
+echo "${test[@]}"

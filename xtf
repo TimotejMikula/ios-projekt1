@@ -132,6 +132,7 @@ fi
 for (( i = counter_of_args + 1; i < count_of_args; i++ )); do
     lognum=$((i))
     log[lognum]=${args[i]}
+    echo "${log[lognum]}"
 done
 
 # echo "name: $name"
@@ -147,16 +148,16 @@ for ((i = 1; i <= ${#log[@]}; i++)); do
     {
     # Decompress .gz files if necessary
     if [[ "${log[i]}" == *".gz" ]]; then
-        echo "${log[i]}"
-        gzip -d "${log[i]}" #| awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ($1 ~ /^[^;]+$/) && (date -d $2 +"%Y-%m-%d %H:%M:%S") && ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/) && (length($3) == 3) && ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/)) print $0; else {exit 1;} }' 
+        # echo "${log[i]}"
+        gunzip -c "${log[i]}" #| awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ($1 ~ /^[^;]+$/) && (date -d $2 +"%Y-%m-%d %H:%M:%S") && ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/) && (length($3) == 3) && ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/)) print $0; else {exit 1;} }' 
     else
-        echo "${log[i]}"
+        # echo "${log[i]}"
         cat "${log[i]}" #| awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ($1 ~ /^[^;]+$/) && (date -d $2 +"%Y-%m-%d %H:%M:%S") && ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/) && (length($3) == 3) && ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/)) print $0; else {exit 1;} }' 
     fi
     } #|
     # {
-    # #    awk '{print $0}'
-    # # Perform different actions based on the provided arguments
+    # # #    awk '{print $0}'
+    # # # Perform different actions based on the provided arguments
     # if (( ( listcurrencyvalue == 0 && listvalue == 0 && statusvalue == 0 && profitvalue == 0 ) || (listvalue == 1) )); then
     #     # Print lines containing the specified name
     #     # for logs in "${log[@]}"; do

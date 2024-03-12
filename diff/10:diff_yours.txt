@@ -1,1 +1,2 @@
-
+cryptoexchange-1.log
+cryptoexchange-2.log.gz

@@ -1,2 +1,2 @@
-cryptoexchange.log
+Trader1
 cryptoexchange.log

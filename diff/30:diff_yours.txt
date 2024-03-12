@@ -1,2 +1,2 @@
-cryptoexchange.log
-cryptoexchange-2.log.gz
+profit
+profit

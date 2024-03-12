@@ -1,2 +1,0 @@
-Trader 2
-cryptoexchange.log

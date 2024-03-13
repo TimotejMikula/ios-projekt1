@@ -17,7 +17,7 @@ fi
 args=("$@")
 count_of_args=$#
 counter_of_args=0
-# IFS=$'\n'
+IFS=$'\n'
 
 counter_for_getopts=1
 a_counter=0
@@ -31,10 +31,18 @@ while getopts ':a:b:c:' opt; do
     case $opt in
         a)  
             date_after=${args[counter_for_getopts]}
+            if [[ ! $(date -d "$date_after" +"%Y-%m-%d %H:%M:%S") ]]; then
+                echo "error invalid date" >&2
+                exit 1
+            fi
             a_counter=$((a_counter + 1)) ;;
             
         b)  
             date_before=${args[counter_for_getopts]}
+            if [[ ! $(date -d "$date_before" +"%Y-%m-%d %H:%M:%S") ]]; then
+                echo "error invalid date" >&2
+                exit 1
+            fi
             b_counter=$((b_counter + 1)) ;;
 
         c)
@@ -139,24 +147,22 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
     } |
 
     
+    {
+        awk -F";" -v name="$name" '{ if ($1 == name) print $0; }'
+    } |
         {
-            awk -F";" -v name="$name" '{ if ($1 == name) print $0; }'
-        } |
-        {
-        if [[ -n "$date_before" ]]; then
-            awk -F";" -v date_before="$(date -d "$date_before" +"%s")" '{ if ( $(date -d $2 +"%s") < date_before ) print $0; }' |
-            awk -F";" -v date_before="$date_before" '{ if ( $2 != date_before ) print $0; }'
-        else
-            awk -F";" '{ print $0; }'
-        fi
-        } |
-        {
-        if [[ -n "$date_after" ]]; then
-            awk -F";" -v date_after="$(date -d "$date_after" +"%s")" '{ if ( $(date -d $2 +"%s") > date_after ) print $0; }' |
-            awk -F";" -v date_after="$date_after" '{ if ( $2 != date_after )print $0; }'
-        else
-            awk -F";" '{ print $0; }'
-        fi
+            if [[ -n "$date_before" && -n "$date_after" ]]; then
+                awk -F";" -v date_before="$(date -d "$date_before" +"%s")" -v date_after="$(date -d "$date_after" +"%s")" '{ if ( ( $(date -d $2 +"%s") > date_after ) || ( $(date -d $2 +"%s" ) < date_before ) ) print $0; }' |
+                awk -F";" -v date_before="$date_before" -v date_after="$date_after" '{ if ( ( $2 != date_before ) && ( $2 != date_after ) ) print $0; }'
+            elif [[ -n "$date_before" ]]; then
+                awk -F";" -v date_before="$(date -d "$date_before" +"%s")" '{ if ( $( date -d $2 +"%s" ) < date_before ) print $0; }' |
+                awk -F";" -v date_before="$date_before" '{ if ( $2 != date_before ) print $0; }'
+            elif [[ -n "$date_after" ]]; then
+                awk -F";" -v date_after="$(date -d "$date_after" +"%s")" '{ if ( $( date -d $2 +"%s" ) > date_after ) print $0; }' |
+                awk -F";" -v date_after="$date_after" '{ if ( $2 != date_after ) print $0; }'
+            else
+                awk -F";" '{ print $0; }'
+            fi
         } |
         {
         if [[ -n "$currency" ]]; then
@@ -178,14 +184,15 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
 
     elif (( statusvalue == 1 )); then
 
-        # awk -F";" '{ count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort -k1
-        awk -F";" '{ values[$3]+=$4 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort -k1 -u
+        # awk -F";" '{ count[$3]+=$4 } END { for (val in count) printf "%s;%.4f\n", val, count[val] }' | sort -k1 |
+        awk -F";" '{ values[$3] += $4 } END { for (val in values) printf "%s;%.4f\n", val, values[val] }' | sort -k1 |
+        awk -F";" '{ values[$1] += $2 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort -k1
         # awk -F";" '{print $3" "$4}' | awk -F" " '{ values[$1]+=$2 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
         # continue
 
     elif (( profitvalue == 1 )); then
 
-        awk -F";" -v profit="${XTF_PROFIT:-20}" '{ if ($4 > 0) count[$3] += ($4 * ((100+profit)/100)); else count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort -u -k1
+        awk -F";" -v profit="${XTF_PROFIT:-20}" '{ if ($4 > 0) count[$3] += ($4 * ((100 + profit) / 100)); else count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort
         # continue
         
     else

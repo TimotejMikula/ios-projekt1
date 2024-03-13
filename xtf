@@ -5,7 +5,7 @@
 # Set POSIXLY_CORRECT and LC_ALL environment variables
 export POSIXLY_CORRECT=yes
 export LC_ALL=C
-export XTF_PROFIT=1.2
+
 set -e #exit immidiately if a command exits with a non-zero status
 
 # Check for --help before getopts
@@ -17,57 +17,42 @@ fi
 args=("$@")
 count_of_args=$#
 counter_of_args=0
-IFS=$'\n'
+# IFS=$'\n'
 
 counter_for_getopts=1
 a_counter=0
 b_counter=0
 c_counter=0
 
-# declare -a currency
+
 
 # Parse command-line options using getopts
 while getopts ':a:b:c:' opt; do
     case $opt in
         a)  
-            if [[ $date_after != "" ]]; then
-                echo "errror multiple -b options" >&2
-                exit 1
-            fi
-            # echo "date_after: ${args[counter_for_getopts]}"
             date_after=${args[counter_for_getopts]}
-            if [[ -n "$date_after" ]]; then
-                if (! (date -d "$date_after" +"%Y-%M-%D %H:%M:%S" >/dev/null 2>&1)); then
-                    echo "error invalid datetime format for date_after" >&2
-                    exit 1
-                    # echo "$date_after"
-                fi
-            fi
+            # if [[ -n "$date_after" ]]; then
+            #     if (! (date -d "$date_after" +"%Y-%M-%D %H:%M:%S") >/dev/null 2>&1); then
+            #         echo "error invalid datetime format for date_after" >&2
+            #         exit 1
+                    
+            #     fi
+            # fi
             a_counter=$((a_counter + 1)) ;;
             
         b)  
-            if [[ $date_before != "" ]]; then
-                echo "errror multiple -a options" >&2
-                exit 1
-            fi
-            # echo "date_before: ${args[counter_for_getopts]}"
             date_before=${args[counter_for_getopts]}
             # Validate datetime format
-            if [[ -n "$date_before" ]]; then
-                if (! (date -d "$date_before" +"%Y-%m-%d %H:%M:%S" >/dev/null 2>&1)); then
-                    echo "error invalid datetime format for date_before" >&2
-                    exit 1
-                    # echo "$date_before"
-                fi
-            fi
+            # if [[ -n "$date_before" ]]; then
+            #     if (! (date -d "$date_before" +"%Y-%m-%d %H:%M:%S") >/dev/null 2>&1); then
+            #         echo "error invalid datetime format for date_before" >&2
+            #         exit 1
+                    
+            #     fi
+            # fi
             b_counter=$((b_counter + 1)) ;;
 
-        c)  
-            if [[ $currency != "" ]]; then
-                echo "errror multiple -c options" >&2
-                exit 1
-            fi
-            
+        c)
             currency="${args[counter_of_args + 1]}"
             c_counter=$((c_counter + 1))
                 
@@ -83,6 +68,11 @@ while getopts ':a:b:c:' opt; do
     counter_of_args=$((counter_of_args + 2))
     counter_for_getopts=$((counter_for_getopts + 1))
 done
+
+if (( a_counter > 1 || b_counter > 1 || c_counter > 1 )); then
+    echo "error multiple arguments" >&2
+    exit 1
+fi
 
 listcurrencyvalue=0
 listvalue=0
@@ -134,7 +124,6 @@ for (( i = counter_of_args + 1; i < count_of_args; i++ )); do
         exit 1
     else
         log[lognum]=${args[i]}
-        # echo "$lognum = ${log[lognum]}"
         lognum=$((lognum + 1))
     fi
 done
@@ -168,12 +157,12 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
 
     {
         {
-            if [[ $name == "" ]]; then
-                echo "error no name provided" >&2
-                exit 1
-            else
-                awk -F";" -v name="$name" '{ if ($1 == name) print $0; }'
-            fi
+        if [[ $name == "" ]]; then
+            echo "error no name provided" >&2
+            exit 1
+        else
+            awk -F";" -v name="$name" '{ if ($1 == name) print $0; }'
+        fi
         } |
         {
         if [[ -n "$date_before" ]]; then
@@ -211,11 +200,15 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
 
     elif (( statusvalue == 1 )); then
 
-        awk -F";" '{ count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort
+        # awk -F";" '{ count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort -k1
+        # awk -F";" '{values[$3] += $4} END {for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
+        awk -F";" '{print $3" "$4}' | awk -F" " '{ values[$1]+=$2 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
+        # continue
 
     elif (( profitvalue == 1 )); then
 
-        awk -F";" -v profit="$XTF_PROFIT" '{ if ($4 > 0) count[$3]+=profit * $4; else count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort
+        awk -F";" -v profit="${XTF_PROFIT:-20}" '{ if ($4 > 0) count[$3] += ($4 * ((100+profit)/100)); else count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort -u
+        # continue
         
     else
         echo "error invalid arguments" >&2

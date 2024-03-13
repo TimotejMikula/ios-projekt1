@@ -31,25 +31,10 @@ while getopts ':a:b:c:' opt; do
     case $opt in
         a)  
             date_after=${args[counter_for_getopts]}
-            # if [[ -n "$date_after" ]]; then
-            #     if (! (date -d "$date_after" +"%Y-%M-%D %H:%M:%S") >/dev/null 2>&1); then
-            #         echo "error invalid datetime format for date_after" >&2
-            #         exit 1
-                    
-            #     fi
-            # fi
             a_counter=$((a_counter + 1)) ;;
             
         b)  
             date_before=${args[counter_for_getopts]}
-            # Validate datetime format
-            # if [[ -n "$date_before" ]]; then
-            #     if (! (date -d "$date_before" +"%Y-%m-%d %H:%M:%S") >/dev/null 2>&1); then
-            #         echo "error invalid datetime format for date_before" >&2
-            #         exit 1
-                    
-            #     fi
-            # fi
             b_counter=$((b_counter + 1)) ;;
 
         c)
@@ -141,11 +126,9 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
     {
     # Decompress .gz files if necessary
     if [[ "${log[i]}" =~ \.gz$ ]]; then
-        # echo "${log[i]}"
         gunzip -c "${log[i]}" | awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ($1 ~ /^[^;]+$/) && (date -d $2 +"%Y-%m-%d %H:%M:%S") && ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/) && (length($3) == 3) && ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/)); else {exit 1;} }' 
         gunzip -c "${log[i]}"
     else
-        # echo "${log[i]}"
         cat "${log[i]}" | awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ($1 ~ /^[^;]+$/) && (date -d $2 +"%Y-%m-%d %H:%M:%S") && ($2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/) && (length($3) == 3) && ($4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/)); else {exit 1;} }'
         cat "${log[i]}"
     fi
@@ -155,25 +138,22 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
         awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ( $1 ~ /^[^;]+$/ ) && ( date -d $2 +"%Y-%m-%d %H:%M:%S" ) && ( $2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/ ) && ( length($3) == 3 ) && ( $4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/ )) print $0; else {exit 1;} }'
     } |
 
-    {
+    
         {
-        if [[ $name == "" ]]; then
-            echo "error no name provided" >&2
-            exit 1
-        else
             awk -F";" -v name="$name" '{ if ($1 == name) print $0; }'
-        fi
         } |
         {
         if [[ -n "$date_before" ]]; then
-            awk -F";" -v date_before="$(date -d "$date_before" +"%Y-%m-%d %H:%M:%S")" '{ if ($(date -d $2 +"%s") < $(date -d date_before +"%s")) print $0; }'
+            awk -F";" -v date_before="$(date -d "$date_before" +"%s")" '{ if ( $(date -d $2 +"%s") < date_before ) print $0; }' |
+            awk -F";" -v date_before="$date_before" '{ if ( $2 != date_before ) print $0; }'
         else
             awk -F";" '{ print $0; }'
         fi
         } |
         {
         if [[ -n "$date_after" ]]; then
-            awk -F";" -v date_after="$(date -d "$date_after" +"%Y-%m-%d %H:%M:%S")" '{ if ($(date -d $2 +"%s") > $(date -d date_after +"%s")) print $0; }'
+            awk -F";" -v date_after="$(date -d "$date_after" +"%s")" '{ if ( $(date -d $2 +"%s") > date_after ) print $0; }' |
+            awk -F";" -v date_after="$date_after" '{ if ( $2 != date_after )print $0; }'
         else
             awk -F";" '{ print $0; }'
         fi
@@ -184,9 +164,7 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
         else
             awk -F";" '{ print $0; }'
         fi
-        }
-    } |
-
+        } |
     {
     # Perform different actions based on the provided arguments
     if (( ( listcurrencyvalue == 0 && listvalue == 0 && statusvalue == 0 && profitvalue == 0 ) || (listvalue == 1) )); then
@@ -201,13 +179,13 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
     elif (( statusvalue == 1 )); then
 
         # awk -F";" '{ count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort -k1
-        # awk -F";" '{values[$3] += $4} END {for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
-        awk -F";" '{print $3" "$4}' | awk -F" " '{ values[$1]+=$2 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
+        awk -F";" '{ values[$3]+=$4 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort -k1
+        # awk -F";" '{print $3" "$4}' | awk -F" " '{ values[$1]+=$2 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
         # continue
 
     elif (( profitvalue == 1 )); then
 
-        awk -F";" -v profit="${XTF_PROFIT:-20}" '{ if ($4 > 0) count[$3] += ($4 * ((100+profit)/100)); else count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort -u
+        awk -F";" -v profit="${XTF_PROFIT:-20}" '{ if ($4 > 0) count[$3] += ($4 * ((100+profit)/100)); else count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort
         # continue
         
     else

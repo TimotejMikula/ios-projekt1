@@ -1,6 +1,6 @@
 #!/bin/bash
 # xmikult00 Timotej Mikula
-# 7.3.2024
+# 16.3.2024
 
 # Set POSIXLY_CORRECT and LC_ALL environment variables
 export POSIXLY_CORRECT=yes

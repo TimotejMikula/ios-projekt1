@@ -10,7 +10,7 @@ set -e #exit immidiately if a command exits with a non-zero status
 
 # Check for --help before getopts
 if [[ ($1 == "--help") || ($1 == "-h") ]]; then
-    echo "Hint - Help."
+    echo "Usage: ./xtf [-a date] [-b date] [-c currency] [list|list-currency|status|profit] name [log [log ...]]"
     exit 0
 fi
 
@@ -24,12 +24,11 @@ a_counter=0
 b_counter=0
 c_counter=0
 
-
-
 # Parse command-line options using getopts
 while getopts ':a:b:c:' opt; do
     case $opt in
         a)  
+            # Check if the date is in the correct format
             date_after=${args[counter_for_getopts]}
             if [[ ! $(date -d "$date_after" +"%Y-%m-%d %H:%M:%S") ]]; then
                 echo "error invalid date" >&2
@@ -38,6 +37,7 @@ while getopts ':a:b:c:' opt; do
             a_counter=$((a_counter + 1)) ;;
             
         b)  
+            # Check if the date is in the correct format
             date_before=${args[counter_for_getopts]}
             if [[ ! $(date -d "$date_before" +"%Y-%m-%d %H:%M:%S") ]]; then
                 echo "error invalid date" >&2
@@ -46,6 +46,7 @@ while getopts ':a:b:c:' opt; do
             b_counter=$((b_counter + 1)) ;;
 
         c)
+            # Check if the currency is in the correct format
             currency="${args[counter_of_args + 1]}"
             c_counter=$((c_counter + 1))
                 
@@ -55,6 +56,7 @@ while getopts ':a:b:c:' opt; do
             fi
             ;;
         *)  
+            # If the flag is not valid, print an error message and exit
             echo "errror invalid flag" >&2
             exit 1 ;;
     esac
@@ -62,6 +64,7 @@ while getopts ':a:b:c:' opt; do
     counter_for_getopts=$((counter_for_getopts + 1))
 done
 
+# Check for multiple arguments
 if (( a_counter > 1 || b_counter > 1 || c_counter > 1 )); then
     echo "error multiple arguments" >&2
     exit 1
@@ -98,12 +101,15 @@ for arg in "${args[@]}"; do
     esac
 done
 
+# Check for multiple arguments
 if (( listcurrencyvalue > 1 || listvalue > 1 || statusvalue > 1 || profitvalue > 1 )); then
     echo "error multiple arguments" >&2
     exit 1
 fi
 
+
 name=${args[counter_of_args]}
+# Check for invalid name
 if [[ ($name == "") || ($name == *.log) || ($name == *" "*) || ($name == "status") || ($name == "list-currency") || ($name == "status") || ($name == "profit")]]; then
     echo "error no name provided" >&2
     exit 1
@@ -121,13 +127,6 @@ for (( i = counter_of_args + 1; i < count_of_args; i++ )); do
     fi
 done
 
-# echo "name: $name"
-# echo "currency: ${currency[*]}"
-# echo "log: ${log[*]}"
-# echo "date_before: $date_before"
-# echo "date_after: $date_after"
-# echo "command:\nlistcurrency: $listcurrencyvalue\nlist: $listvalue\nstatus: $statusvalue\nprofit: $profitvalue"
-
 {
 # Process each log file
 for (( i = 1; i <= ${#log[@]}; i++ )); do
@@ -142,7 +141,7 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
     fi
 done
 } |
-
+# filter the output based on the provided arguments
 for (( i = 1; i <= ${#log[@]}; i++ )); do
     {
         awk -F";" '{if (( $0 ~ /^[^;]+;[^;]+;[A-Z]{3};[+-]?[0-9]+([.][0-9]+)?$/ ) && ( $1 ~ /^[^;]+$/ ) && ( date -d $2 +"%Y-%m-%d %H:%M:%S" ) && ( $2 ~ /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$/ ) && ( length($3) == 3 ) && ( $4 ~ /^[+-]?[0-9]+([.][0-9]+)?$/ )) print $0; else {exit 1;} }'
@@ -153,20 +152,6 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
         awk -F";" -v name="$name" '{ if ($1 == name) print $0; }'
     } |
     {
-        # if [[ -n "$date_before" && -n "$date_after" ]]; then
-        #     awk -F";" -v date_before="$(date -d "$date_before" +"%s")" -v date_after="$(date -d "$date_after" +"%s")" '{ if ( ( $(date -d $2 +"%s") > date_after ) || ( $(date -d $2 +"%s" ) < date_before ) ) print $0; }' |
-        #     awk -F";" -v date_before="$date_before" '{ if ( $2 != date_before ) print $0; }' |
-        #     awk -F";" -v date_after="$date_after" '{ if ( $2 != date_after ) print $0; }'
-        # elif [[ -n "$date_before" ]]; then
-        #     awk -F";" -v date_before="$(date -d "$date_before" +"%s")" '{ if ( $( date -d $2 +"%s" ) < date_before ) print $0; }' |
-        #     awk -F";" -v date_before="$date_before" '{ if ( $2 != date_before ) print $0; }'
-        # elif [[ -n "$date_after" ]]; then
-        #     awk -F";" -v date_after="$(date -d "$date_after" +"%s")" '{ if ( $( date -d $2 +"%s" ) > date_after ) print $0; }' |
-        #     awk -F";" -v date_after="$date_after" '{ if ( $2 != date_after ) print $0; }'
-        # else
-        #     awk -F";" '{ print $0; }'
-        # fi
-
         if [[ -n "$date_before" && -n "$date_after" ]]; then
             awk -F";" -v date_before="$date_before" -v date_after="$date_after" '{ if ( ( $2 > date_after ) || ( $2 < date_before ) ) print $0; }' |
             awk -F";" -v date_before="$date_before" '{ if ( $2 != date_before ) print $0; }' |
@@ -197,26 +182,16 @@ for (( i = 1; i <= ${#log[@]}; i++ )); do
     {
     # Perform different actions based on the provided arguments
     if (( ( listcurrencyvalue == 0 && listvalue == 0 && statusvalue == 0 && profitvalue == 0 ) || (listvalue == 1) )); then
-        
         awk -F";" '{ print $0; }'
 
     elif (( listcurrencyvalue == 1 )); then
-        
-        # Print the third column of lines and sort them
         awk -F";" '{ print $3; }' | sort -u 
 
-    elif (( statusvalue == 1 )); then
-
-        # awk -F";" '{ count[$3]+=$4 } END { for (val in count) printf "%s;%.4f\n", val, count[val] }' | sort -k1 |
+    elif (( statusvalue == 1 )); then 
         awk -F";" '{ values[$3] += $4 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
-        # awk -F";" '{ values[$1] += $2 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort -k1
-        # awk -F";" '{print $3" "$4}' | awk -F" " '{ values[$1]+=$2 } END { for (val in values) printf "%s : %.4f\n", val, values[val] }' | sort
-        # continue
 
     elif (( profitvalue == 1 )); then
-
-        awk -F";" -v profit="${XTF_PROFIT:-20}" '{ if ($4 > 0) count[$3] += ($4 * ((100 + profit) / 100)); else count[$3]+=$4 } END { for (val in count) printf "%s : %.4f\n", val, count[val] }' | sort
-        # continue
+        awk -F";" -v profit="${XTF_PROFIT:-20}" '{ count[$3]+=$4 } END { for (val in count) {if (count[val] > 0) {count[val]*=((100+profit)/100)} printf "%s : %.4f\n", val, count[val]} }' | sort
         
     else
         echo "error invalid arguments" >&2

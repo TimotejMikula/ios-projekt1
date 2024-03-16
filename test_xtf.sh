@@ -47,10 +47,7 @@ NORMAL='\033[0m'
 test_count=0
 correct=0
 
-# compile maze.c just in case
-
 rm -rf diff
-
 
 
 run_test() {
@@ -388,6 +385,10 @@ run_test "" "${args[@]}"
 # 42 missing value in second entry
 echo -e "Trader1;2024-01-15 15:30:42;EUR;-2000.0000\nTrader2;2024-01-15 15:31:12;BTC;\nTrader1;2024-01-16 18:06:32;USD;-3000.0000\nCryptoWiz;2024-01-17 08:58:09;CZK;10000.0000\nTrader1;2024-01-20 11:43:02;ETH;1.9417\nTrader1;2024-01-22 09:17:40;ETH;10.9537" > missing_value.log
 args=("list" "Trader1" "missing_value.log")
+run_test "" "${args[@]}"
+
+# 43 invalid currency code
+args=("-c" "ab1" "Trader1" "cryptoexchange.log")
 run_test "" "${args[@]}"
 
 
